@@ -42,7 +42,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 text-center">
-          <div className="inline-flex items-center gap-2 mb-2">
+          <a href="/about" className="inline-flex items-center gap-2 mb-2 hover:opacity-80 transition-opacity">
             <span
               className="w-7 h-7 rounded flex items-center justify-center text-white text-xs font-bold"
               style={{ backgroundColor: "var(--color-accent)" }}
@@ -52,7 +52,7 @@ export default function LoginPage() {
             <span className="text-lg font-semibold tracking-tight" style={{ color: "var(--color-text)" }}>
               Greenlight
             </span>
-          </div>
+          </a>
           <p className="text-sm" style={{ color: "var(--color-text-2)" }}>
             Compliance copilot for financial advisors
           </p>

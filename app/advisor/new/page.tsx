@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Nav } from "@/components/nav";
 import { SeverityBadge } from "@/components/severity-badge";
 import { RiskScoreRing } from "@/components/risk-score-ring";
+import { ContentDropZone } from "@/components/content-drop-zone";
 
 interface User { id: string; name: string; email: string; role: string; }
 interface Finding {
@@ -198,6 +199,9 @@ export default function NewReviewPage() {
                   <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text-2)" }}>
                     Content
                   </label>
+                  <div className="mb-2">
+                    <ContentDropZone onContent={setContent} />
+                  </div>
                   <textarea
                     value={content}
                     onChange={e => setContent(e.target.value)}

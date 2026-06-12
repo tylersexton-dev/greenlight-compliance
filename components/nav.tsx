@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTheme } from "@/lib/theme";
 
 interface NavProps {
   user: { name: string; role: string; email: string };
@@ -8,6 +9,7 @@ interface NavProps {
 
 export function Nav({ user }: NavProps) {
   const router = useRouter();
+  const { theme, toggle } = useTheme();
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -32,26 +34,27 @@ export function Nav({ user }: NavProps) {
 
         {user.role === "principal" ? (
           <div className="flex items-center gap-4">
-            <a href="/principal/queue" className="text-sm hover:opacity-70 transition-opacity" style={{ color: "var(--color-text-2)" }}>
-              Review Queue
-            </a>
-            <a href="/principal/rules" className="text-sm hover:opacity-70 transition-opacity" style={{ color: "var(--color-text-2)" }}>
-              Rule Config
-            </a>
+            <a href="/principal/queue" className="text-sm hover:opacity-70 transition-opacity" style={{ color: "var(--color-text-2)" }}>Queue</a>
+            <a href="/principal/analytics" className="text-sm hover:opacity-70 transition-opacity" style={{ color: "var(--color-text-2)" }}>Analytics</a>
+            <a href="/principal/rules" className="text-sm hover:opacity-70 transition-opacity" style={{ color: "var(--color-text-2)" }}>Rules</a>
           </div>
         ) : (
           <div className="flex items-center gap-4">
-            <a href="/advisor" className="text-sm hover:opacity-70 transition-opacity" style={{ color: "var(--color-text-2)" }}>
-              My Documents
-            </a>
-            <a href="/advisor/new" className="text-sm hover:opacity-70 transition-opacity" style={{ color: "var(--color-text-2)" }}>
-              New Review
-            </a>
+            <a href="/advisor" className="text-sm hover:opacity-70 transition-opacity" style={{ color: "var(--color-text-2)" }}>My Documents</a>
+            <a href="/advisor/new" className="text-sm hover:opacity-70 transition-opacity" style={{ color: "var(--color-text-2)" }}>New Review</a>
           </div>
         )}
       </div>
 
       <div className="flex items-center gap-3">
+        <button
+          onClick={toggle}
+          className="text-xs px-2 py-1 rounded border transition-colors hover:opacity-70"
+          style={{ borderColor: "var(--color-border)", color: "var(--color-text-3)" }}
+          title="Toggle dark mode"
+        >
+          {theme === "light" ? "🌙" : "☀️"}
+        </button>
         <div className="text-right">
           <p className="text-xs font-medium" style={{ color: "var(--color-text)" }}>{user.name}</p>
           <p className="text-xs capitalize" style={{ color: "var(--color-text-3)" }}>{user.role}</p>
