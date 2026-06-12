@@ -1,5 +1,7 @@
 # Greenlight — Compliance Copilot for Financial Advisors
 
+[![CI](https://github.com/tylersexton-dev/greenlight-compliance/actions/workflows/ci.yml/badge.svg)](https://github.com/tylersexton-dev/greenlight-compliance/actions/workflows/ci.yml)
+
 Financial advisors at broker-dealers cannot publish marketing content without compliance review under **FINRA Rule 2210**. Review queues take days. Greenlight is the pre-flight check — an advisor pastes content, and in seconds gets span-level findings, a risk score, a compliant rewrite, and a submission workflow with a tamper-evident audit trail.
 
 **Why this matters:** A single FINRA violation can cost $10,000–$1M+ in fines. Compliance principals review hundreds of pieces of content manually. Greenlight cuts that loop from days to seconds for clear violations, letting principals focus on edge cases.
