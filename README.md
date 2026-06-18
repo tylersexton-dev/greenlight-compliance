@@ -54,11 +54,13 @@ Financial advisors at broker-dealers cannot publish marketing content without co
 ```bash
 git clone <repo> greenlight && cd greenlight
 npm install
-npm run db:generate
-npm run seed
+cp .env.example .env.local   # edit if using REVIEW_PROVIDER=anthropic
+npm run seed                  # migrates DB and seeds demo data
 npm run dev
 # → http://localhost:3000
 ```
+
+See `.env.example` for all environment variables and their descriptions.
 
 ---
 
