@@ -1,0 +1,10 @@
+run = "npm run replit:start"
+entrypoint = "app/page.tsx"
+hidden = [".next", "node_modules"]
+
+[nix]
+channel = "stable-24_05"
+
+[[ports]]
+localPort = 3000
+externalPort = 80
