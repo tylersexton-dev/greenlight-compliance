@@ -38,7 +38,7 @@ export interface ReviewPipelineOptions {
 export interface ReviewPipelineResult {
   ruleFindings: RuleMatch[];
   semanticFindings: SemanticFinding[];
-  allFindings: Array<RuleMatch | (SemanticFinding & { startOffset: number; endOffset: number })>;
+  allFindings: RuleMatch[];
   riskScore: number;
   riskBreakdown: Record<string, number>;
   rewrite: string;
@@ -117,7 +117,7 @@ export async function runReviewPipeline(
       ...f,
       quotedSpan: restore(f.quotedSpan, mapping),
       explanation: restore(f.explanation, mapping),
-      suggestedFix: restore(f.suggestedFix, mapping),
+      suggestedFix: f.suggestedFix ? restore(f.suggestedFix, mapping) : undefined,
     }));
 
     rewrite = restore(semanticResponse.rewrite, mapping);
@@ -140,6 +140,7 @@ export async function runReviewPipeline(
         ruleId: f.ruleId,
         category: f.category,
         severity: f.severity,
+        source: "semantic" as const,
         startOffset: pos?.startOffset ?? 0,
         endOffset: pos?.endOffset ?? 0,
         matchedText: f.quotedSpan,
@@ -154,9 +155,20 @@ export async function runReviewPipeline(
   const rewriteDiff = generateDiff(content, rewrite);
 
   // Resolve offsets for semantic findings
-  const semanticWithOffsets = semanticFindings.map((f) => {
+  const semanticWithOffsets: RuleMatch[] = semanticFindings.map((f) => {
     const pos = locateSpan(content, f.quotedSpan);
-    return { ...f, startOffset: pos?.startOffset ?? 0, endOffset: pos?.endOffset ?? 0 };
+    return {
+      ruleId: f.ruleId,
+      category: f.category,
+      severity: f.severity,
+      source: "semantic" as const,
+      startOffset: pos?.startOffset ?? 0,
+      endOffset: pos?.endOffset ?? 0,
+      matchedText: f.quotedSpan,
+      explanation: f.explanation,
+      citation: f.citation,
+      suggestedFix: f.suggestedFix ?? "",
+    };
   });
 
   onProgress?.({
@@ -173,7 +185,7 @@ export async function runReviewPipeline(
   return {
     ruleFindings,
     semanticFindings,
-    allFindings: [...ruleFindings, ...semanticWithOffsets],
+    allFindings: [...ruleFindings, ...semanticWithOffsets] as RuleMatch[],
     riskScore: scoreResult.total,
     riskBreakdown: scoreResult.breakdown as unknown as Record<string, number>,
     rewrite,

@@ -7,7 +7,7 @@ export interface SemanticFinding {
   quotedSpan: string; // exact text from document — used to locate offset
   explanation: string;
   citation: string;
-  suggestedFix: string;
+  suggestedFix?: string;
 }
 
 export interface SemanticReviewRequest {

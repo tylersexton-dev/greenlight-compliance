@@ -35,10 +35,11 @@ export interface RuleMatch {
   ruleId: string;
   category: RuleCategory;
   severity: Severity;
+  source: "rules" | "semantic";
   startOffset: number;
   endOffset: number;
   matchedText: string;
   explanation: string;
   citation: string;
-  suggestedFix: string;
+  suggestedFix?: string;
 }
