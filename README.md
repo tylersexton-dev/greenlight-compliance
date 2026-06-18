@@ -167,6 +167,16 @@ Schema is Postgres-portable. Swap `better-sqlite3` for `postgres`, update the Dr
 
 ---
 
+## Roadmap
+
+- **PDF ingestion** — File upload currently supports `.txt` and `.md` only. PDF extraction requires server-side processing (pdf.js or pdfminer) and is intentionally out of scope for this demo.
+- **Multi-tenant firm isolation** — currently single-firm; `firmId` is on users and overrides but not enforced at query level
+- **Redis session store + rate limiter** — sessions are in-memory; document the swap
+- **FINRA 4511 record retention export** — export approved documents and audit chains as signed PDFs
+- **Semantic layer injection hardening** — wrap submitted content in XML delimiters; use instruction hierarchy
+
+---
+
 ## Disclaimer
 
 The rule set is a credible, well-cited subset of FINRA Rule 2210 intended for demonstration. It does not constitute legal advice, is not comprehensive, and should not be used as a substitute for qualified compliance review.
