@@ -10,7 +10,7 @@ const DB_PATH = process.env.DB_PATH ?? path.join(process.cwd(), "greenlight.db")
 const sqlite = new Database(DB_PATH);
 
 const events = sqlite
-  .prepare("SELECT id, document_id, action, actor FROM audit_events ORDER BY timestamp ASC LIMIT 10")
+  .prepare("SELECT id, document_id, action, actor FROM audit_events ORDER BY seq ASC LIMIT 10")
   .all() as Array<{ id: string; document_id: string; action: string; actor: string }>;
 
 if (events.length === 0) {

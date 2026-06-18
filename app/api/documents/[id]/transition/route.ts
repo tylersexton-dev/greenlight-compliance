@@ -13,7 +13,6 @@ const TransitionSchema = z.object({
   note: z.string().max(1000).optional(),
 });
 
-// Role permissions: which actions each role can perform
 const ROLE_ACTIONS: Record<string, TransitionAction[]> = {
   advisor: ["submit", "resubmit", "archive"],
   principal: ["begin_review", "request_changes", "approve", "reject", "archive"],
@@ -31,7 +30,6 @@ export async function POST(
   const [doc] = await db.select().from(documents).where(eq(documents.id, id)).limit(1);
   if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Advisors can only transition their own documents
   if (user.role === "advisor" && doc.advisorId !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -50,13 +48,11 @@ export async function POST(
 
   const { action, note } = parsed.data;
 
-  // Role check
   const allowedActions = ROLE_ACTIONS[user.role] ?? [];
   if (!allowedActions.includes(action)) {
     return NextResponse.json({ error: `Role '${user.role}' cannot perform action '${action}'` }, { status: 403 });
   }
 
-  // State machine check
   const currentStatus = doc.status as Parameters<typeof transition>[0];
   if (!canTransition(currentStatus, action)) {
     return NextResponse.json(
@@ -68,31 +64,32 @@ export async function POST(
   const newStatus = transition(currentStatus, action);
   const now = new Date();
 
-  // Update document status
-  await db.update(documents).set({ status: newStatus, updatedAt: now }).where(eq(documents.id, id));
-
-  // Append audit event with hash chain
-  const lastEvent = await db
+  // Fetch chain tip before entering transaction (read-only, safe outside)
+  const [lastEvent] = await db
     .select()
     .from(auditEvents)
     .where(eq(auditEvents.documentId, id))
-    .orderBy(desc(auditEvents.timestamp))
+    .orderBy(desc(auditEvents.seq))
     .limit(1);
 
-  const prevHash = lastEvent[0]?.hash ?? GENESIS_HASH;
+  const prevHash = lastEvent?.hash ?? GENESIS_HASH;
   const eventPayload = { documentId: id, actor: user.id, action, note, timestamp: now };
   const { payloadHash, hash } = computeEventHash(eventPayload, prevHash);
 
-  await db.insert(auditEvents).values({
-    id: crypto.randomUUID(),
-    documentId: id,
-    actor: user.id,
-    action,
-    note: note ?? null,
-    payloadHash,
-    prevHash,
-    hash,
-    timestamp: now,
+  // Both writes in one transaction — an unaudited state change must never persist
+  db.transaction((tx) => {
+    tx.update(documents).set({ status: newStatus, updatedAt: now }).where(eq(documents.id, id)).run();
+    tx.insert(auditEvents).values({
+      id: crypto.randomUUID(),
+      documentId: id,
+      actor: user.id,
+      action,
+      note: note ?? null,
+      payloadHash,
+      prevHash,
+      hash,
+      timestamp: now,
+    }).run();
   });
 
   return NextResponse.json({ status: newStatus, action });

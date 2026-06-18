@@ -77,36 +77,39 @@ export async function POST(
         const reviewId = crypto.randomUUID();
         const now = new Date();
 
-        await db.insert(reviews).values({
-          id: reviewId,
-          documentId: id,
-          versionId: latestVersion.id,
-          riskScore: result.riskScore,
-          riskBreakdown: JSON.stringify(result.riskBreakdown),
-          rewrite: result.rewrite,
-          rewriteDiff: JSON.stringify(result.rewriteDiff),
-          pipelineLog: JSON.stringify({ piiLog: result.piiLog, provider: result.provider }),
-          provider: result.provider,
-          createdAt: now,
-        });
+        const findingRows = result.allFindings.map((finding) => ({
+          id: crypto.randomUUID(),
+          reviewId,
+          source: finding.source,
+          ruleId: finding.ruleId,
+          category: finding.category,
+          severity: finding.severity,
+          startOffset: finding.startOffset,
+          endOffset: finding.endOffset,
+          matchedText: finding.matchedText,
+          explanation: finding.explanation,
+          citation: finding.citation,
+          suggestedFix: finding.suggestedFix ?? null,
+        }));
 
-        // Persist findings
-        for (const finding of result.allFindings) {
-          await db.insert(findings).values({
-            id: crypto.randomUUID(),
-            reviewId,
-            source: "ruleId" in finding && finding.ruleId.startsWith("SEM-") ? "semantic" : "rules",
-            ruleId: finding.ruleId,
-            category: finding.category,
-            severity: finding.severity,
-            startOffset: finding.startOffset,
-            endOffset: finding.endOffset,
-            matchedText: ("matchedText" in finding ? finding.matchedText : undefined) ?? ("quotedSpan" in finding ? (finding as { quotedSpan: string }).quotedSpan : ""),
-            explanation: finding.explanation,
-            citation: finding.citation,
-            suggestedFix: finding.suggestedFix ?? null,
-          });
-        }
+        // Persist review + findings atomically
+        db.transaction((tx) => {
+          tx.insert(reviews).values({
+            id: reviewId,
+            documentId: id,
+            versionId: latestVersion.id,
+            riskScore: result.riskScore,
+            riskBreakdown: JSON.stringify(result.riskBreakdown),
+            rewrite: result.rewrite,
+            rewriteDiff: JSON.stringify(result.rewriteDiff),
+            pipelineLog: JSON.stringify({ piiLog: result.piiLog, provider: result.provider }),
+            provider: result.provider,
+            createdAt: now,
+          }).run();
+          if (findingRows.length > 0) {
+            tx.insert(findings).values(findingRows).run();
+          }
+        });
 
         send({ type: "complete", stage: "complete", ...result });
       } catch (err) {

@@ -86,7 +86,8 @@ export const findings = sqliteTable("findings", {
 });
 
 export const auditEvents = sqliteTable("audit_events", {
-  id: text("id").primaryKey(),
+  seq: integer("seq").primaryKey({ autoIncrement: true }),
+  id: text("id").notNull().unique(),
   documentId: text("document_id")
     .notNull()
     .references(() => documents.id),

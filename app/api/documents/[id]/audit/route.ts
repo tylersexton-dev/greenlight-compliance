@@ -38,7 +38,7 @@ export async function GET(
     .from(auditEvents)
     .innerJoin(users, eq(auditEvents.actor, users.id))
     .where(eq(auditEvents.documentId, id))
-    .orderBy(asc(auditEvents.timestamp));
+    .orderBy(asc(auditEvents.seq));
 
   // Verify chain integrity
   const chainRecords: AuditEventRecord[] = events.map((e) => ({

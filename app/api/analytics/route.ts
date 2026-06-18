@@ -70,13 +70,13 @@ export async function GET(req: NextRequest) {
     .select({ documentId: auditEvents.documentId, timestamp: auditEvents.timestamp })
     .from(auditEvents)
     .where(eq(auditEvents.action, "submit"))
-    .orderBy(asc(auditEvents.timestamp));
+    .orderBy(asc(auditEvents.seq));
 
   const reviewEvents = await db
     .select({ documentId: auditEvents.documentId, timestamp: auditEvents.timestamp })
     .from(auditEvents)
     .where(eq(auditEvents.action, "begin_review"))
-    .orderBy(asc(auditEvents.timestamp));
+    .orderBy(asc(auditEvents.seq));
 
   const turnaroundHours: number[] = [];
   for (const submit of submitEvents) {
