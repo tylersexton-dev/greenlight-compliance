@@ -1,10 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { readFileSync } from "fs";
 import path from "path";
-import type { ReviewProvider, SemanticReviewRequest, SemanticReviewResponse, SemanticFinding } from "./types";
+import { z } from "zod";
+import type { ReviewProvider, SemanticReviewRequest, SemanticReviewResponse } from "./types";
 import { RULE_REGISTRY } from "../rules/registry";
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+import { LLMResponseSchema, LLMValidationError } from "./llm-schema";
 
 const PROMPT_TEMPLATE = readFileSync(
   path.join(process.cwd(), "prompts/semantic-review.v1.md"),
@@ -18,31 +17,33 @@ function buildPrompt(request: SemanticReviewRequest): string {
     .map((r) => `- ${r.id} (${r.category}): ${r.name} — ${r.citation}`)
     .join("\n");
 
-  return PROMPT_TEMPLATE.replace("{{CONTENT_TYPE}}", request.contentType)
-    .replace("{{CONTENT}}", request.content)
-    .replace("{{RULES_CONTEXT}}", rulesContext);
-}
-
-function guardHallucinations(
-  findings: SemanticFinding[],
-  content: string
-): SemanticFinding[] {
-  return findings.filter((f) => {
-    if (!content.includes(f.quotedSpan)) {
-      console.warn(
-        `[AnthropicProvider] Discarding finding ${f.ruleId}: quotedSpan not found in document.`
-      );
-      return false;
-    }
-    return true;
-  });
+  // Substitute RULES_CONTEXT and CONTENT_TYPE first, CONTENT last.
+  // This prevents user content that contains "{{RULES_CONTEXT}}" from being template-expanded.
+  // Use replacer functions to avoid JS special replacement patterns ($&, $', $`).
+  return PROMPT_TEMPLATE
+    .replace("{{CONTENT_TYPE}}", () => request.contentType)
+    .replace("{{RULES_CONTEXT}}", () => rulesContext)
+    .replace("{{CONTENT}}", () => request.content);
 }
 
 export class AnthropicProvider implements ReviewProvider {
   name = "anthropic";
 
+  // Lazy client — constructed on first review() call so importing this module
+  // in fixture mode never touches the SDK or requires the API key.
+  private client: import("@anthropic-ai/sdk").default | null = null;
+
+  private getClient() {
+    if (!this.client) {
+      const Anthropic = require("@anthropic-ai/sdk");
+      this.client = new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY });
+    }
+    return this.client!;
+  }
+
   async review(request: SemanticReviewRequest): Promise<SemanticReviewResponse> {
     const prompt = buildPrompt(request);
+    const client = this.getClient();
 
     const message = await client.messages.create({
       model: "claude-sonnet-4-6",
@@ -50,33 +51,45 @@ export class AnthropicProvider implements ReviewProvider {
       messages: [{ role: "user", content: prompt }],
     });
 
-    const rawText = message.content
+    const rawText = (message.content as Array<{ type: string; text?: string }>)
       .filter((b) => b.type === "text")
-      .map((b) => (b as { type: "text"; text: string }).text)
+      .map((b) => b.text ?? "")
       .join("");
 
-    // Extract JSON from response (strip any markdown fences)
+    // Extract JSON — strip any markdown fences
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      throw new Error("AnthropicProvider: No JSON found in response");
+      throw new LLMValidationError("AnthropicProvider: No JSON found in response", []);
     }
 
-    let parsed: { findings: SemanticFinding[]; rewrite: string };
+    let raw: unknown;
     try {
-      parsed = JSON.parse(jsonMatch[0]);
+      raw = JSON.parse(jsonMatch[0]);
     } catch {
-      throw new Error("AnthropicProvider: Invalid JSON in response");
+      throw new LLMValidationError("AnthropicProvider: Response is not valid JSON", []);
     }
 
-    const safeFindings = guardHallucinations(parsed.findings ?? [], request.content);
+    const parsed = LLMResponseSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new LLMValidationError("AnthropicProvider: LLM response failed schema validation", parsed.error.issues);
+    }
+
+    // Hallucination guard: discard findings whose quotedSpan doesn't exist in the document
+    const safeFindings = parsed.data.findings.filter((f) => {
+      if (!request.content.includes(f.quotedSpan)) {
+        console.warn(`[AnthropicProvider] Discarding finding ${f.ruleId}: quotedSpan not found in document.`);
+        return false;
+      }
+      return true;
+    });
 
     return {
       findings: safeFindings,
-      rewrite: parsed.rewrite ?? "",
+      rewrite: parsed.data.rewrite,
       providerMeta: {
         model: "claude-sonnet-4-6",
-        inputTokens: message.usage.input_tokens,
-        outputTokens: message.usage.output_tokens,
+        inputTokens: (message.usage as { input_tokens: number }).input_tokens,
+        outputTokens: (message.usage as { output_tokens: number }).output_tokens,
       },
     };
   }

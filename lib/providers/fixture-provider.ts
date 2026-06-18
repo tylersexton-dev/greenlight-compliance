@@ -1,5 +1,5 @@
-import { createHash } from "crypto";
 import type { ReviewProvider, SemanticReviewRequest, SemanticReviewResponse } from "./types";
+import { LLMResponseSchema, LLMValidationError } from "./llm-schema";
 
 // Keyed by SHA256(content.slice(0, 200)) for quick matching
 const FIXTURES: Record<string, SemanticReviewResponse> = {
@@ -103,8 +103,15 @@ export class FixtureProvider implements ReviewProvider {
   name = "fixture";
 
   async review(request: SemanticReviewRequest): Promise<SemanticReviewResponse> {
-    // Simulate realistic latency
     await new Promise((resolve) => setTimeout(resolve, 600 + Math.random() * 400));
-    return selectFixture(request.content);
+    const raw = selectFixture(request.content);
+
+    // Validate fixture responses against the same schema as live LLM output
+    const parsed = LLMResponseSchema.safeParse({ findings: raw.findings, rewrite: raw.rewrite ?? "" });
+    if (!parsed.success) {
+      throw new LLMValidationError("FixtureProvider: fixture data failed schema validation", parsed.error.issues);
+    }
+
+    return { ...raw, findings: parsed.data.findings, rewrite: parsed.data.rewrite };
   }
 }
