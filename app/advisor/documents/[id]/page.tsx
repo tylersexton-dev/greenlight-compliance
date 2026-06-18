@@ -8,6 +8,9 @@ import { SeverityBadge } from "@/components/severity-badge";
 import { RiskScoreRing } from "@/components/risk-score-ring";
 
 interface User { id: string; name: string; email: string; role: string; }
+interface DocRecord { id: string; title: string; contentType: string; status: string; advisorId: string; updatedAt: string; }
+interface VersionRecord { content: string; version: number; }
+interface ReviewRecord { riskScore: number; riskBreakdown: string; }
 interface Finding {
   id: string; ruleId: string; severity: string; category: string;
   startOffset: number; endOffset: number; matchedText: string;
@@ -21,9 +24,9 @@ export default function DocumentDetailPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const [user, setUser] = useState<User | null>(null);
-  const [doc, setDoc] = useState<any>(null);
-  const [latestVersion, setLatestVersion] = useState<any>(null);
-  const [review, setReview] = useState<any>(null);
+  const [doc, setDoc] = useState<DocRecord | null>(null);
+  const [latestVersion, setLatestVersion] = useState<VersionRecord | null>(null);
+  const [review, setReview] = useState<ReviewRecord | null>(null);
   const [findings, setFindings] = useState<Finding[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [chainVerification, setChainVerification] = useState<{ valid: boolean; message: string } | null>(null);
@@ -60,6 +63,7 @@ export default function DocumentDetailPage() {
     setLoading(false);
   }
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
   useEffect(() => { loadData(); }, [id]);
 
   async function doTransition(action: string, note?: string) {
@@ -207,7 +211,7 @@ export default function DocumentDetailPage() {
                               <p className="text-xs font-medium" style={{ color: "var(--color-text)" }}>
                                 {f.ruleId} · {f.category.replace(/_/g, " ")}
                               </p>
-                              <p className="text-xs italic mt-0.5" style={{ color: "var(--color-text-2)" }}>"{f.matchedText}"</p>
+                              <p className="text-xs italic mt-0.5" style={{ color: "var(--color-text-2)" }}>&quot;{f.matchedText}&quot;</p>
                               {selectedFinding?.id === f.id && (
                                 <div className="mt-2 space-y-1">
                                   <p className="text-xs" style={{ color: "var(--color-text)" }}>{f.explanation}</p>

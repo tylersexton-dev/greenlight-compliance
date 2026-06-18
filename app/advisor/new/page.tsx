@@ -388,7 +388,7 @@ export default function NewReviewPage() {
                                     {f.ruleId} — {f.category.replace(/_/g, " ")}
                                   </p>
                                   <p className="text-xs italic mb-1" style={{ color: "var(--color-text-2)" }}>
-                                    "{f.matchedText}"
+                                    &quot;{f.matchedText}&quot;
                                   </p>
                                   {selectedFinding === f && (
                                     <div className="mt-2 space-y-1.5">

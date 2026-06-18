@@ -107,7 +107,10 @@ async function runReview(docId: string, versionId: string, content: string) {
 
 async function doTransition(docId: string, actor: string, action: string, prevHash: string) {
   const [doc] = await db.select().from(schema.documents).where(eq(schema.documents.id, docId)).limit(1);
-  const newStatus = transition(doc!.status as any, action as any);
+  const newStatus = transition(
+    doc!.status as Parameters<typeof transition>[0],
+    action as Parameters<typeof transition>[1]
+  );
   const now = new Date();
   const payload = { documentId: docId, actor, action, timestamp: now };
   const { payloadHash, hash } = computeEventHash(payload, prevHash);

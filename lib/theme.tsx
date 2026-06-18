@@ -15,6 +15,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem("gl-theme") as Theme | null;
     const preferred = stored ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(preferred);
     document.documentElement.setAttribute("data-theme", preferred);
   }, []);

@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 import path from "path";
-import { z } from "zod";
+import type Anthropic from "@anthropic-ai/sdk";
 import type { ReviewProvider, SemanticReviewRequest, SemanticReviewResponse } from "./types";
 import { RULE_REGISTRY } from "../rules/registry";
 import { LLMResponseSchema, LLMValidationError } from "./llm-schema";
@@ -31,19 +31,19 @@ export class AnthropicProvider implements ReviewProvider {
 
   // Lazy client — constructed on first review() call so importing this module
   // in fixture mode never touches the SDK or requires the API key.
-  private client: import("@anthropic-ai/sdk").default | null = null;
+  private client: Anthropic | null = null;
 
-  private getClient() {
+  private async getClient(): Promise<Anthropic> {
     if (!this.client) {
-      const Anthropic = require("@anthropic-ai/sdk");
-      this.client = new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const { default: AnthropicSDK } = await import("@anthropic-ai/sdk");
+      this.client = new AnthropicSDK({ apiKey: process.env.ANTHROPIC_API_KEY });
     }
-    return this.client!;
+    return this.client;
   }
 
   async review(request: SemanticReviewRequest): Promise<SemanticReviewResponse> {
     const prompt = buildPrompt(request);
-    const client = this.getClient();
+    const client = await this.getClient();
 
     const message = await client.messages.create({
       model: "claude-sonnet-4-6",
