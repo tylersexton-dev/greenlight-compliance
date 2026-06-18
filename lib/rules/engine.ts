@@ -56,6 +56,11 @@ export function runRulesEngine(
     : RULE_REGISTRY;
 
   for (const rule of activeRules) {
+    // Document-level skip: if the document already contains adequate disclosure language, skip
+    if (rule.documentSkipIfContains?.some((p) => { p.lastIndex = 0; return p.test(content); })) {
+      continue;
+    }
+
     for (const pattern of rule.patterns) {
       // Reset lastIndex for global regexes
       pattern.regex.lastIndex = 0;

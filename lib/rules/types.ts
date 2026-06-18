@@ -14,6 +14,10 @@ export interface RulePattern {
   negationWindowTokens?: number; // suppress if negator within N tokens
 }
 
+// If any of these match anywhere in the document, skip the entire rule.
+// Used to suppress disclosure rules when the document already has adequate disclosure language.
+export type DocumentSkipPattern = RegExp;
+
 export interface Rule {
   id: string;
   category: RuleCategory;
@@ -23,6 +27,8 @@ export interface Rule {
   citation: string;
   patterns: RulePattern[];
   suggestedFixTemplate: string;
+  // If any of these match anywhere in the full document, skip this rule entirely
+  documentSkipIfContains?: DocumentSkipPattern[];
 }
 
 export interface RuleMatch {

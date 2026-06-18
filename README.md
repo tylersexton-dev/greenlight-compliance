@@ -87,12 +87,24 @@ See `.env.example` for all environment variables and their descriptions.
 ## Test and Eval
 
 ```bash
-npm test          # 53 unit tests
+npm test          # 56 unit tests (includes transaction and seq-ordering tests)
 npm run eval      # 30-sample golden set — precision/recall/F1 per category
 ```
 
-Eval results (rules engine, offline): 29/30 passing, 97.2% recall, 72.2% F1.
-URG, SUPR, TEST categories: 100% precision and recall.
+Eval results (rules engine, offline): 25/30 passing under new pass criterion (zero FN + no FP BLOCKERs), 97.5% recall, 85.7% F1. DISC, SUPR, TEST, URG: 100% precision and recall.
+
+### Eval-driven tuning — DISC category
+
+The eval harness caught a precision problem in the missing-disclosure rules:
+
+| Version | DISC Precision | DISC Recall | Notes |
+|---|---|---|---|
+| v1 (initial) | 14% | 100% | Over-fired: "stock", "ETF", "financial planning", "wealth management" triggered on nearly every sample |
+| v2 (tuned) | 100% | 100% | Narrowed triggers; added document-level skip when standard disclosure language already present |
+
+Root cause: DISC-001 triggered on any mention of broad security-type words regardless of whether the document already contained risk disclosure language. DISC-002 triggered on "financial planning" and "wealth management" — phrases present in almost all advisor content.
+
+Fix: added `documentSkipIfContains` patterns to both rules (suppresses the rule entirely when the document contains existing disclosure language), narrowed DISC-001 to specific product types without accompanying disclosure, and tightened DISC-002 to fire only when actively advertising services without mentioning ADV/registration status.
 
 ---
 

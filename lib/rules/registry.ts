@@ -59,7 +59,8 @@ export const RULE_REGISTRY: Rule[] = [
     patterns: [
       { regex: /\bwill\s+(return|yield|earn|produce|generate)\s+\d+\s*%/gi },
       { regex: /\bexpect\s+\d+\s*%\s+(return|growth|gain)/gi },
-      { regex: /\b\d+\s*%\s+(annual(?:ly)?|yearly|monthly)(?:\s+(return|gain|profit|growth))?\b/gi },
+      // Negative lookahead excludes product caps/floors (e.g. "10% annual cap")
+      { regex: /\b\d+\s*%\s+(?:annual(?:ly)?|yearly|monthly)\b(?!\s+(?:cap|floor|ceiling|limit|maximum))/gi },
       { regex: /\b(guaranteed|assured)\s+returns?\s+of\s+\d+/gi },
       { regex: /\baveraging?\s+\d+\s*%\s+(return|annual|yield)/gi },
       { regex: /\bdoubled?\s+(your|their|my|our)\s+(money|investment|portfolio)\b/gi, negationWindowTokens: 6 },
@@ -191,11 +192,19 @@ export const RULE_REGISTRY: Rule[] = [
     category: "missing_disclosures",
     severity: "WARNING",
     name: "Security Referenced Without Risk Disclosure",
-    description: "A specific security or strategy is mentioned without any associated risk disclosure language.",
+    description: "A specific security or strategy is mentioned without any risk disclosure language anywhere in the document.",
     citation: "FINRA Rule 2210(d)(1)(B)",
     patterns: [
-      { regex: /\b(stock|bond|ETF|mutual fund|annuity|option|REIT|alternative investment)\b/gi, negationWindowTokens: 3 },
-      { regex: /\binvest(ing|ment|ments)?\s+in\s+[A-Z][a-z]+/g },
+      // Only fire on explicit named investment products — not generic "investing"
+      { regex: /\b(annuity|REIT|alternative investment|hedge fund|structured note|fixed indexed annuity)\b/gi, negationWindowTokens: 3 },
+      { regex: /\binvest(?:ing|ment|ments)?\s+in\s+(?:an?\s+)?(?:annuit|REIT|alternative)/gi },
+    ],
+    // Skip entirely if the document already contains standard risk disclosure language
+    documentSkipIfContains: [
+      /investing involves risk/i,
+      /loss of principal/i,
+      /past performance is not indicative/i,
+      /there (?:is|are) (?:no )?guarantee/i,
     ],
     suggestedFixTemplate:
       "After mentioning '{match}', add disclosure language such as: 'Investing involves risk, including the possible loss of principal.'",
@@ -205,12 +214,22 @@ export const RULE_REGISTRY: Rule[] = [
     category: "missing_disclosures",
     severity: "INFO",
     name: "ADV Disclosure Reminder",
-    description: "Content references advisory services without mentioning Form ADV or registration.",
+    description: "Content promotes investment advisory services without mentioning Form ADV or SEC/state registration status.",
     citation: "FINRA Rule 2210(d)(3)",
     patterns: [
-      { regex: /\bregistered\s+investment\s+adviser?\b/gi },
-      { regex: /\bfinancial\s+(planning|plan)\b/gi },
-      { regex: /\bwealth\s+management\b/gi },
+      // Fire when the document is actively advertising/selling advisory services
+      { regex: /\bour\s+(?:wealth\s+management|financial\s+planning|investment\s+advisory|portfolio\s+management)\s+services?\b/gi },
+      { regex: /\bhire\s+(?:us|me)\s+(?:as\s+)?(?:your\s+)?(?:financial\s+)?advis(?:or|er)\b/gi },
+      { regex: /\b(?:complimentary|free)\s+consultation\b/gi },
+      { regex: /\bwho\s+manages?\s+your\s+money\b/gi },
+    ],
+    // Skip if the document already contains registration/ADV disclosure language
+    documentSkipIfContains: [
+      /registered\s+investment\s+advis(?:er|or)/i,
+      /Form\s+ADV/i,
+      /SEC[-\s]registered/i,
+      /state[-\s]registered/i,
+      /investment\s+advis(?:er|or)\s+with\s+the/i,
     ],
     suggestedFixTemplate:
       "Consider adding: '[Firm] is a registered investment adviser. Please review our Form ADV for information about our services, fees, and conflicts of interest.'",

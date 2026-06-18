@@ -89,7 +89,9 @@ function runEval(): void {
       }
     }
 
-    const pass = falseNegatives.length === 0;
+    // Pass = zero false negatives AND no false-positive BLOCKERs
+    const fpBlockers = falsePositives.filter((fp) => fp.includes(":BLOCKER"));
+    const pass = falseNegatives.length === 0 && fpBlockers.length === 0;
 
     results.push({
       id: sample.id,
